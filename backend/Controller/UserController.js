@@ -19,8 +19,9 @@ exports.register=async (req,res,next)=>{
         password:req.body.password
     });
          const user=await reguserinfo.save();
-
+      
          res.status(200).json(user);
+       
 
     } catch (error) {
         console.log(error);
@@ -34,7 +35,7 @@ exports.register=async (req,res,next)=>{
 
 
 exports.login=async (req,res,next)=>{
-    
+//    console.log(req.body);
     try {
         
    
@@ -49,6 +50,7 @@ exports.login=async (req,res,next)=>{
     {
         res.status(404).json("Invalid password or Email");
     }
+    // console.log(user);
     res.status(200).json(user);
 
 } catch (error) {
@@ -106,14 +108,16 @@ exports.update=async (req,res,next)=>{
 
 
  exports.getallusers=async (req,res,next)=>{
-
+console.log("checking");
+// res.send("checkig")
             try {
                 
            const users=await User.find({});
-           res.send(users);
+           res.status(200).json(users)
 
             } catch (error) {
-             res.send(error);   
+                console.log(error)
+             res.status(200).json(error);   
             }
         
             
@@ -121,18 +125,27 @@ exports.update=async (req,res,next)=>{
 
 
  exports.getoneuser=async (req,res,next)=>{
-    
-          
+    // console.log("reguest from frontend");
+    // res.send(0);
+    const userid = req.query.userid;
+    const username = req.query.username;
+    // if(!userid && username)
+    // {
+    //     res.send(500).json("no obj found")
+    // }
+    console.log(userid+" "+username);
                 try {
                     
-               const users=await User.findById(req.params.id);
-               const {password,updatedAt,...other}=users._doc;
-               res.send(other);
+                    const user = userid ? await User.findById({_id:userid}) : await User.findOne({ username: username });
+            //    console.log("user info" + user);
+                    const {password,updatedAt,...other}=user._doc;
+            //    console.log(other);
+               res.status(200).json(user);
     
                 } catch (error) 
                 {
                     console.log(error);
-                 res.send(error);   
+                 res.status(500).json(error);   
                 }
             
                 
@@ -144,8 +157,14 @@ exports.update=async (req,res,next)=>{
         
                     try {
                         
-                   
+                   const u=await User.findById(req.body.userid);
+                   if(!u)
+                   {
+                    res.status(403).json("Account has already been deleted sucessfully");
+
+                   }
                    const user=await User.deleteOne(req.body.params);
+                //    console.log(user);
                    res.status(200).json("Account has been deleted sucessfully");
                 }
                  catch (error) 
@@ -161,6 +180,7 @@ exports.update=async (req,res,next)=>{
         
 
 exports.followuser=async (req,res,next)=>{
+    console.log("in follwing backend");
                if(req.body.userid!=req.params.id)
                {
  
@@ -169,16 +189,17 @@ exports.followuser=async (req,res,next)=>{
             
        
                const user=await User.findById(req.params.id);
-               const usertofollowing=await User.findById(req.body.userid);
+               const currentuser=await User.findById(req.body.userid);
 
               if(!user.followers.includes(req.body.userid))
               {
                      await user.updateOne({ $push : {followers:req.body.userid}});
-                     await usertofollowing.updateOne({ $push : {followings:req.params.id}});
-
+                     await currentuser.updateOne({ $push : {followings:req.params.id}});
+                 console.log(currentuser);
                      res.status(200).json("Followed sucessfully");
               }
               else{
+                  console.log("already following");
          res.status(403).json("already following");
               }
 
@@ -199,6 +220,7 @@ exports.followuser=async (req,res,next)=>{
 
 
 exports.unfollowuser=async (req,res,next)=>{
+    console.log("in unfoloowwing user");
                     if(req.body.userid!=req.params.id)
                     {
       
@@ -207,14 +229,15 @@ exports.unfollowuser=async (req,res,next)=>{
                  
             
                     const user=await User.findById(req.params.id);
-                    const usertofollowing=await User.findById(req.body.userid);
+                    const currentuser=await User.findById(req.body.userid);
      
-                   if(!user.followers.includes(req.body.userid))
+                   if(user.followers.includes(req.body.userid))
                    {
                           await user.updateOne({ $pull : {followers:req.body.userid}});
-                          await usertofollowing.updateOne({ $pull : {followings:req.params.id}});
+                          await currentuser.updateOne({ $pull : {followings:req.params.id}});
      
                           res.status(200).json("unFollowed sucessfully");
+                          console.log("unfoloowed sucessfuly ");
                    }
                    else{
               res.status(403).json("already not following");
@@ -233,4 +256,26 @@ exports.unfollowuser=async (req,res,next)=>{
      
      
      
-                     }               
+                     }          
+                     
+exports.getfriends=async (req,res,next)=>
+{
+    try {
+        const user = await User.findById(req.params.userid);
+        const friends = await Promise.all(
+          user.followings.map((friendId) => {
+            return User.findById(friendId);
+          })
+        );
+        let friendList = [];
+        friends.map((friend) => {
+          const { _id, username, profilePicture } = friend;
+          friendList.push({ _id, username, profilePicture });
+        });
+        res.status(200).json(friendList)
+      } catch (err) {
+        res.status(500).json(err);
+      }
+         
+                       
+}          

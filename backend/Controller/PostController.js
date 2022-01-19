@@ -27,8 +27,8 @@ const post=new Post(req.body);
 exports.getallpost=async (req,res,next)=>{
 try {
     
-
-const posts=await Post.find({});
+    const posts=await Post.find({});
+    // console.log(posts);
 
 res.status(200).json(posts);
 } catch (error) {
@@ -91,10 +91,10 @@ exports.updatepost=async (req,res,next)=>{
 exports.deletepost=async (req,res,next)=>{
 
     try {
-        
-   
+        // console.log(req.params.id);
+          
         const post=await Post.findById(req.params.id);
-       
+    //    console.log(post);
         if(post.userid===req.body.userid)
         {
             await post.deleteOne();
@@ -106,10 +106,12 @@ exports.deletepost=async (req,res,next)=>{
             res.status(403).json("You can delte only your post");
         }
        
+       
        }
         catch (error)
         {
-               res.ststus(500).json(error);
+            // console.log(error);
+               res.status(500).json(error);
        }
 
 
@@ -119,9 +121,9 @@ exports.deletepost=async (req,res,next)=>{
 
 
 exports.likepost=async (req,res,next)=>{
-
+  
     try {
-        
+        //  console.log("like"+" "+req.params.id);
    
         const post=await Post.findById(req.params.id);
        
@@ -149,7 +151,7 @@ exports.likepost=async (req,res,next)=>{
 exports.dislikepost=async (req,res,next)=>{
 
     try {
-        
+        console.log("disliking ")
    
         const post=await Post.findById(req.params.id);
        
@@ -177,20 +179,22 @@ exports.dislikepost=async (req,res,next)=>{
 
 exports.timeline=async (req,res,next)=>{
 
+    // res.send(req.params.id);
    try {
        
-const user=await User.findById(req.body.userid);
-
+const user=await User.findById(req.params.id);
 const thisuserposts= await Post.find({userid:user._id});
 
 const friendposts=await  Promise.all(
 
 
-    user.followings.map((id)=>{
-        Post.find({userid:id});
+    user.followings.filter((id)=>{
+        Post.find({userid:id})!=null;
     })
 )
-
+// console.log("fetching"+thisuserposts);
+// if(friendposts==null)
+//   res.status(200).json(thisuserposts);
 res.status(200).json(thisuserposts.concat(...friendposts));
 
 
@@ -202,5 +206,21 @@ res.status(200).json(thisuserposts.concat(...friendposts));
    }
 
 
+
+}
+
+exports.getallPostOfuser=async (req,res,next)=>{
+
+   
+
+    try {
+        const user = await User.findOne({ username: req.params.username });
+        const posts = await Post.find({ userid: user._id });
+        // console.log(posts);
+        // res.send(posts);
+        res.status(200).json(posts);
+      } catch (err) {
+        res.status(500).json(err);
+      }
 
 }
